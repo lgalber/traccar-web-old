@@ -1,12 +1,11 @@
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useTheme } from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import MapView from '../map/core/MapView';
 import MapSelectedDevice from '../map/main/MapSelectedDevice';
 import MapAccuracy from '../map/main/MapAccuracy';
 import MapGeofence from '../map/MapGeofence';
-import MapCurrentLocation from '../map/MapCurrentLocation';
 import PoiMap from '../map/main/PoiMap';
 import MapPadding from '../map/MapPadding';
 import { devicesActions } from '../store';
@@ -14,23 +13,17 @@ import MapDefaultCamera from '../map/main/MapDefaultCamera';
 import MapLiveRoutes from '../map/main/MapLiveRoutes';
 import MapPositionMarkers from '../map/MapPositionMarkers';
 import MapOverlay from '../map/overlay/MapOverlay';
-import MapGeocoder from '../map/control/MapGeocoder';
-import MapScale from '../map/MapScale';
-import MapRuler from '../map/control/MapRuler';
-import MapNotification from '../map/control/MapNotification';
 import useFeatures from '../common/util/useFeatures';
+import { useTranslation } from '../common/components/LocalizationProvider';
 
-const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
+const MainMap = ({ filteredPositions, selectedPosition }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
+  const t = useTranslation();
 
   const desktop = useMediaQuery(theme.breakpoints.up('md'));
 
-  const eventsAvailable = useSelector((state) => !!state.events.items.length);
-
   const features = useFeatures();
-
-  const [rulerActive, setRulerActive] = useState(false);
 
   const onMarkerClick = useCallback(
     (_, deviceId) => {
@@ -39,9 +32,16 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
     [dispatch],
   );
 
+  // Main map: Google only, as three map types, plus zoom buttons
+  const mapTypes = [
+    { id: 'googleRoad', label: t('mapTypeMap') },
+    { id: 'googleHybrid', label: t('mapTypeSatellite') },
+    { id: 'googleRoadTraffic', label: t('mapTypeTraffic') },
+  ];
+
   return (
     <>
-      <MapView>
+      <MapView mapTypes={mapTypes}>
         <MapOverlay />
         <MapGeofence />
         <MapAccuracy positions={filteredPositions} />
@@ -52,19 +52,11 @@ const MainMap = ({ filteredPositions, selectedPosition, onEventsClick }) => {
           onMarkerClick={onMarkerClick}
           selectedPosition={selectedPosition}
           showStatus
-          disabled={rulerActive}
         />
         <MapDefaultCamera filteredPositions={filteredPositions} />
         <MapSelectedDevice />
-        <MapRuler positions={filteredPositions} onActiveChange={setRulerActive} />
-        {!features.disableEvents && (
-          <MapNotification enabled={eventsAvailable} onClick={onEventsClick} />
-        )}
       </MapView>
-      <MapScale />
-      <MapCurrentLocation />
-      <MapGeocoder />
-      {desktop && (!features.disableDeviceList || !features.disableTabs) && (
+      {desktop && (
         <MapPadding
           start={
             (features.disableDeviceList

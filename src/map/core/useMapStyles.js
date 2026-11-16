@@ -48,6 +48,13 @@ export default () => {
   return useMemo(
     () => [
       {
+        // Light, low-detail basemap that keeps device markers in focus (default)
+        id: 'openFreeMapLight',
+        title: t('mapOpenFreeMapLight'),
+        style: 'https://tiles.openfreemap.org/styles/positron',
+        available: true,
+      },
+      {
         id: 'openFreeMap',
         title: t('mapOpenFreeMap'),
         style: 'https://tiles.openfreemap.org/styles/liberty',
@@ -93,6 +100,22 @@ export default () => {
             ? [`google://roadmap/{z}/{x}/{y}?key=${googleKey}`]
             : [0, 1, 2, 3].map(
                 (i) => `https://mt${i}.google.com/vt/lyrs=m&hl=en&x={x}&y={y}&z={z}&s=Ga`,
+              ),
+          maxZoom: 20,
+          attribution: '© Google',
+        }),
+        available: true,
+        attribute: 'googleKey',
+      },
+      {
+        // Google roadmap with live traffic drawn in
+        id: 'googleRoadTraffic',
+        title: t('mapGoogleTraffic'),
+        style: styleCustom({
+          tiles: googleKey
+            ? [`google://roadmap/{z}/{x}/{y}?key=${googleKey}&layerType=layerTraffic`]
+            : [0, 1, 2, 3].map(
+                (i) => `https://mt${i}.google.com/vt/lyrs=m,traffic&hl=en&x={x}&y={y}&z={z}&s=Ga`,
               ),
           maxZoom: 20,
           attribution: '© Google',
