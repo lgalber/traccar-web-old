@@ -22,13 +22,15 @@ import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import EventNoteIcon from '@mui/icons-material/EventNote';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import BottomMenu from '../common/components/BottomMenu';
+import PushNotificationsCard from '../common/components/PushNotificationsCard';
 import { formatAlarm, formatTime } from '../common/util/formatter';
 import { prefixString } from '../common/util/stringUtils';
 import { useRestriction } from '../common/util/permissions';
 import useFeatures from '../common/util/useFeatures';
 import fetchOrThrow from '../common/util/fetchOrThrow';
 import { useAsyncTask } from '../reactHelper';
-import { devicesActions, eventsActions } from '../store';
+import { devicesActions } from '../store';
+import useMarkSeen from '../common/util/useMarkSeen';
 
 const useStyles = makeStyles()((theme, { railOffset }) => ({
   root: {
@@ -120,9 +122,9 @@ const AlertsPage = () => {
   const { classes } = useStyles({ railOffset: rail ? theme.dimensions.railWidth : '0px' });
 
   const devices = useSelector((state) => state.devices.items);
-  const openAlarms = useSelector((state) => state.events.items).filter(
-    (event) => event.type === 'alarm',
-  );
+  // All pending notifications of this user (alarms and other subscribed events) until marked as seen
+  const pending = useSelector((state) => state.events.items);
+  const markSeen = useMarkSeen();
 
   const [tab, setTab] = useState('open');
   const [todayEvents, setTodayEvents] = useState(null);
@@ -171,10 +173,10 @@ const AlertsPage = () => {
     navigate('/');
   };
 
-  const acknowledge = (event) => dispatch(eventsActions.delete(event));
-  const acknowledgeAll = () => openAlarms.forEach(acknowledge);
+  const acknowledge = (event) => markSeen([event]);
+  const acknowledgeAll = () => markSeen(pending);
 
-  const items = tab === 'open' ? openAlarms : todayEvents || [];
+  const items = tab === 'open' ? pending : todayEvents || [];
 
   const renderRow = (event) => {
     const alarm = event.type === 'alarm';
@@ -216,14 +218,14 @@ const AlertsPage = () => {
               <Typography variant="h4" component="h1">
                 {t('alertsTitle')}
               </Typography>
-              {tab === 'open' && openAlarms.length > 0 && (
+              {tab === 'open' && pending.length > 0 && (
                 <Button variant="outlined" color="inherit" onClick={acknowledgeAll}>
                   {t('alertsAcknowledgeAll')}
                 </Button>
               )}
             </div>
             <Tabs value={tab} onChange={(_, value) => setTab(value)}>
-              <Tab value="open" label={`${t('alertsOpen')} (${openAlarms.length})`} />
+              <Tab value="open" label={`${t('alertsOpen')} (${pending.length})`} />
               <Tab value="today" label={t('reportToday')} />
             </Tabs>
             <Paper elevation={0} className={classes.card}>
@@ -236,8 +238,9 @@ const AlertsPage = () => {
               )}
             </Paper>
           </main>
-          {!readonly && (
-            <aside className={classes.side}>
+          <aside className={classes.side}>
+            <PushNotificationsCard />
+            {!readonly && (
               <Paper elevation={0} className={classes.sideCard}>
                 <Typography variant="h6" component="h2">
                   {t('alertsRules')}
@@ -254,7 +257,10 @@ const AlertsPage = () => {
                           .map((it) => formatAlarm(it, t))
                           .join(', '),
                         rule.always ? t('notificationAlways') : null,
-                        rule.notificators,
+                        rule.notificators
+                          ?.split(',')
+                          .map((it) => t(prefixString('notificator', it)) || it)
+                          .join(', '),
                       ]
                         .filter(Boolean)
                         .join(' · ')}
@@ -276,8 +282,8 @@ const AlertsPage = () => {
                   {t('sharedNotifications')}
                 </Link>
               </Paper>
-            </aside>
-          )}
+            )}
+          </aside>
         </div>
       </div>
     </>
