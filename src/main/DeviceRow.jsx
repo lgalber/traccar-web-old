@@ -6,7 +6,11 @@ import { alpha, useTheme } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { devicesActions } from '../store';
-import { formatBoolean } from '../common/util/formatter';
+import BatteryFullSvg from '@material-symbols/svg-600/rounded/battery_full.svg?react';
+import Battery5BarSvg from '@material-symbols/svg-600/rounded/battery_5_bar.svg?react';
+import Battery3BarSvg from '@material-symbols/svg-600/rounded/battery_3_bar.svg?react';
+import Battery1BarSvg from '@material-symbols/svg-600/rounded/battery_1_bar.svg?react';
+import { formatBoolean, getBatteryStatus } from '../common/util/formatter';
 import {
   deviceStateColor,
   deviceStateTextColor,
@@ -89,6 +93,23 @@ const useStyles = makeStyles()((theme) => ({
     gap: theme.spacing(0.75),
     flexShrink: 0,
   },
+  meta: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.75),
+  },
+  battery: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 1,
+    fontSize: '0.75rem',
+    fontWeight: 600,
+    '& svg': {
+      width: 15,
+      height: 15,
+      fill: 'currentColor',
+    },
+  },
   pill: {
     padding: theme.spacing(0.25, 1.1),
     borderRadius: 999,
@@ -97,6 +118,13 @@ const useStyles = makeStyles()((theme) => ({
     whiteSpace: 'nowrap',
   },
 }));
+
+const BatteryIcon = ({ level }) => {
+  if (level >= 90) return <BatteryFullSvg />;
+  if (level >= 60) return <Battery5BarSvg />;
+  if (level >= 30) return <Battery3BarSvg />;
+  return <Battery1BarSvg />;
+};
 
 const DeviceRow = ({ devices, index, style }) => {
   const { classes, cx } = useStyles();
@@ -163,6 +191,9 @@ const DeviceRow = ({ devices, index, style }) => {
 
   const selected = selectedDeviceId === item.id;
 
+  const batteryLevel = position?.attributes?.batteryLevel;
+  const hasBattery = typeof batteryLevel === 'number';
+
   return (
     <div style={style} className={classes.wrapper}>
       <ListItemButton
@@ -208,9 +239,21 @@ const DeviceRow = ({ devices, index, style }) => {
           >
             {formatDeviceState(state, t)}
           </span>
-          <Typography variant="caption" color="textSecondary" noWrap>
-            {time}
-          </Typography>
+          <span className={classes.meta}>
+            {hasBattery && (
+              <span
+                className={classes.battery}
+                style={{ color: theme.palette[getBatteryStatus(batteryLevel)].main }}
+                title={`${t('positionBatteryLevel')}: ${batteryLevel}%`}
+              >
+                <BatteryIcon level={batteryLevel} />
+                {`${batteryLevel}%`}
+              </span>
+            )}
+            <Typography variant="caption" color="textSecondary" noWrap>
+              {time}
+            </Typography>
+          </span>
         </span>
       </ListItemButton>
     </div>
