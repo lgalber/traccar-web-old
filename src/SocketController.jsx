@@ -47,17 +47,36 @@ const SocketController = () => {
 
   const features = useFeatures();
 
-  // Pending alerts (not yet marked as seen) are kept on the server: load them when the session starts,
-  // so alerts that arrived while the app was closed are still shown
-  useAsyncTask(
-    async ({ signal }) => {
-      if (authenticated && !features.disableEvents) {
-        const response = await fetchOrThrow('api/events/unseen', { signal });
-        dispatch(eventsActions.add(await response.json()));
+  // Pending alerts (not yet marked as seen) are kept on the server. They are reloaded whenever the live
+  // connection opens (start and every reconnect), when the app returns to the foreground and when a push
+  // arrives or is tapped, because live events are missed while a phone has the app suspended.
+  const loadPending = useCallback(async () => {
+    if (features.disableEvents) {
+      return;
+    }
+    try {
+      const response = await fetch('api/events/unseen');
+      if (response.ok) {
+        dispatch(eventsActions.set(await response.json()));
       }
-    },
-    [authenticated, features.disableEvents, dispatch],
-  );
+    } catch {
+      // offline; the next reconnect or resume loads them
+    }
+  }, [features.disableEvents, dispatch]);
+
+  const loadPendingRef = useRef(loadPending);
+  loadPendingRef.current = loadPending;
+
+  useEffect(() => {
+    if (!authenticated || !('serviceWorker' in navigator)) return undefined;
+    const onMessage = (event) => {
+      if (event.data?.type === 'refresh-alerts') {
+        loadPendingRef.current();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', onMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', onMessage);
+  }, [authenticated]);
 
   const handleEvents = useCallback(
     (events) => {
@@ -109,6 +128,7 @@ const SocketController = () => {
     socket.onopen = () => {
       dispatch(sessionActions.updateSocket(true));
       socket.send(JSON.stringify({ logs: includeLogsRef.current }));
+      loadPendingRef.current();
     };
 
     socket.onclose = async (event) => {
@@ -221,6 +241,7 @@ const SocketController = () => {
     const onVisibility = () => {
       if (!document.hidden) {
         reconnectIfNeeded();
+        loadPendingRef.current();
       }
     };
     window.addEventListener('online', reconnectIfNeeded);
