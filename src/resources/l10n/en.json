@@ -21,6 +21,7 @@
     "alertsOpen": "Pending",
     "alertsEmpty": "No pending alerts",
     "alertsAcknowledgeAll": "Mark all as seen",
+    "alertsSettings": "Settings",
     "alertsRules": "Alert rules",
     "alertsShowOnMap": "Show on map",
     "sharedSave": "Save",

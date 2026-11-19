@@ -44,25 +44,20 @@ const useStyles = makeStyles()((theme, { railOffset }) => ({
     },
   },
   layout: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: theme.spacing(3),
-    alignItems: 'flex-start',
-    maxWidth: 1200,
+    maxWidth: 960,
   },
   main: {
-    flex: '999 1 520px',
     minWidth: 0,
     display: 'flex',
     flexDirection: 'column',
     gap: theme.spacing(2),
   },
-  side: {
-    flex: '1 1 280px',
-    maxWidth: 360,
-    display: 'flex',
-    flexDirection: 'column',
+  // Settings tab: notification blocks side by side when there is room, stacked on phones
+  settings: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
     gap: theme.spacing(2),
+    alignItems: 'start',
   },
   heading: {
     display: 'flex',
@@ -224,66 +219,75 @@ const AlertsPage = () => {
                 </Button>
               )}
             </div>
-            <Tabs value={tab} onChange={(_, value) => setTab(value)}>
+            <Tabs
+              value={tab}
+              onChange={(_, value) => setTab(value)}
+              variant="scrollable"
+              scrollButtons={false}
+            >
               <Tab value="open" label={`${t('alertsOpen')} (${pending.length})`} />
               <Tab value="today" label={t('reportToday')} />
+              <Tab value="settings" label={t('alertsSettings')} />
             </Tabs>
-            <Paper elevation={0} className={classes.card}>
-              {items.length ? (
-                <List disablePadding>{items.map(renderRow)}</List>
-              ) : (
-                <Typography color="textSecondary" className={classes.empty}>
-                  {tab === 'open' ? t('alertsEmpty') : t('sharedNoData')}
-                </Typography>
-              )}
-            </Paper>
-          </main>
-          <aside className={classes.side}>
-            <PushNotificationsCard />
-            {!readonly && (
-              <Paper elevation={0} className={classes.sideCard}>
-                <Typography variant="h6" component="h2">
-                  {t('alertsRules')}
-                </Typography>
-                {rules.map((rule) => (
-                  <div key={rule.id} className={classes.rule}>
-                    <Typography fontWeight={600}>
-                      {rule.description || t(prefixString('event', rule.type))}
+            {tab === 'settings' ? (
+              <div className={classes.settings}>
+                <PushNotificationsCard />
+                {!readonly && (
+                  <Paper elevation={0} className={classes.sideCard}>
+                    <Typography variant="h6" component="h2">
+                      {t('alertsRules')}
                     </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      {[
-                        rule.attributes?.alarms
-                          ?.split(',')
-                          .map((it) => formatAlarm(it, t))
-                          .join(', '),
-                        rule.always ? t('notificationAlways') : null,
-                        rule.notificators
-                          ?.split(',')
-                          .map((it) => t(prefixString('notificator', it)) || it)
-                          .join(', '),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Typography>
-                  </div>
-                ))}
-                <Button
-                  variant="contained"
-                  color="secondary"
-                  onClick={() => navigate('/settings/notification')}
-                >
-                  {t('sharedAdd')}
-                </Button>
-                <Link
-                  component="button"
-                  variant="body2"
-                  onClick={() => navigate('/settings/notifications')}
-                >
-                  {t('sharedNotifications')}
-                </Link>
+                    {rules.map((rule) => (
+                      <div key={rule.id} className={classes.rule}>
+                        <Typography fontWeight={600}>
+                          {rule.description || t(prefixString('event', rule.type))}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {[
+                            rule.attributes?.alarms
+                              ?.split(',')
+                              .map((it) => formatAlarm(it, t))
+                              .join(', '),
+                            rule.always ? t('notificationAlways') : null,
+                            rule.notificators
+                              ?.split(',')
+                              .map((it) => t(prefixString('notificator', it)) || it)
+                              .join(', '),
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')}
+                        </Typography>
+                      </div>
+                    ))}
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={() => navigate('/settings/notification')}
+                    >
+                      {t('sharedAdd')}
+                    </Button>
+                    <Link
+                      component="button"
+                      variant="body2"
+                      onClick={() => navigate('/settings/notifications')}
+                    >
+                      {t('sharedNotifications')}
+                    </Link>
+                  </Paper>
+                )}
+              </div>
+            ) : (
+              <Paper elevation={0} className={classes.card}>
+                {items.length ? (
+                  <List disablePadding>{items.map(renderRow)}</List>
+                ) : (
+                  <Typography color="textSecondary" className={classes.empty}>
+                    {tab === 'open' ? t('alertsEmpty') : t('sharedNoData')}
+                  </Typography>
+                )}
               </Paper>
             )}
-          </aside>
+          </main>
         </div>
       </div>
     </>
