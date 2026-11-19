@@ -21,6 +21,7 @@
     "alertsOpen": "Pendientes",
     "alertsEmpty": "No hay alertas pendientes",
     "alertsAcknowledgeAll": "Marcar todo como visto",
+    "alertsSettings": "Configuración",
     "alertsRules": "Reglas de alerta",
     "alertsShowOnMap": "Ver en el mapa",
     "sharedSave": "Guardar",
