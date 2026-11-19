@@ -1,10 +1,9 @@
-import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Button, IconButton, Paper, Typography } from '@mui/material';
+import { Button, Paper, Typography } from '@mui/material';
 import { makeStyles } from 'tss-react/mui';
-import CloseIcon from '@mui/icons-material/Close';
 import { useTranslation } from '../common/components/LocalizationProvider';
 import { formatAlarm, formatTime } from '../common/util/formatter';
+import useMarkSeen from '../common/util/useMarkSeen';
 import { devicesActions } from '../store';
 
 const useStyles = makeStyles()((theme, { offset }) => ({
@@ -13,10 +12,13 @@ const useStyles = makeStyles()((theme, { offset }) => ({
     zIndex: 6,
     left: '50%',
     transform: 'translateX(-50%)',
+    width: 'max-content',
     maxWidth: `calc(100vw - ${theme.spacing(4)})`,
+    boxSizing: 'border-box',
     display: 'flex',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: theme.spacing(1.5),
+    gap: theme.spacing(1, 1.5),
     padding: theme.spacing(1, 1, 1, 2),
     backgroundColor: theme.palette.alwaysDark.main,
     color: theme.palette.common.white,
@@ -30,6 +32,13 @@ const useStyles = makeStyles()((theme, { offset }) => ({
       top: theme.spacing(10),
     },
   },
+  message: {
+    flex: '1 1 200px',
+    minWidth: 0,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(1.5),
+  },
   dot: {
     width: 10,
     height: 10,
@@ -39,11 +48,30 @@ const useStyles = makeStyles()((theme, { offset }) => ({
   },
   text: {
     minWidth: 0,
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis',
   },
-  view: {
+  more: {
+    flexShrink: 0,
+    padding: theme.spacing(0.25, 1),
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+    fontSize: '0.75rem',
+    fontWeight: 700,
+  },
+  actions: {
+    display: 'flex',
+    gap: theme.spacing(1),
+    marginLeft: 'auto',
+  },
+  show: {
+    flexShrink: 0,
+    color: theme.palette.common.white,
+    borderColor: 'rgba(255,255,255,0.5)',
+    '&:hover': {
+      borderColor: theme.palette.common.white,
+      backgroundColor: 'rgba(255,255,255,0.08)',
+    },
+  },
+  seen: {
     flexShrink: 0,
     backgroundColor: theme.palette.common.white,
     color: theme.palette.alwaysDark.main,
@@ -53,40 +81,45 @@ const useStyles = makeStyles()((theme, { offset }) => ({
   },
 }));
 
-// Shows the newest unacknowledged alarm on top of the map until it is viewed or hidden.
+// Shows the newest unconfirmed alarm on top of the map. It stays until the alarm is marked as seen
+// (here, in the device card or on the Alerts page); "Show" only opens the device.
 const AlarmToast = ({ offset = '0px' }) => {
   const { classes } = useStyles({ offset });
   const dispatch = useDispatch();
   const t = useTranslation();
+  const markSeen = useMarkSeen();
 
   const devices = useSelector((state) => state.devices.items);
-  const events = useSelector((state) => state.events.items);
-  const [hiddenIds, setHiddenIds] = useState([]);
+  const alarms = useSelector((state) => state.events.items).filter((e) => e.type === 'alarm');
 
-  const event = events.find((e) => e.type === 'alarm' && !hiddenIds.includes(e.id));
+  const event = alarms[0];
   if (!event) {
     return null;
   }
 
-  const hide = () => setHiddenIds([...hiddenIds, event.id]);
-  const view = () => {
-    dispatch(devicesActions.selectId(event.deviceId));
-    hide();
-  };
-
   return (
     <Paper elevation={9} className={classes.root} role="alert">
-      <span className={classes.dot} />
-      <Typography variant="body2" className={classes.text}>
-        <strong>{formatAlarm(event.attributes.alarm, t)}</strong>
-        {` · ${devices[event.deviceId]?.name || ''} · ${formatTime(event.eventTime, 'seconds')}`}
-      </Typography>
-      <Button size="small" className={classes.view} onClick={view}>
-        {t('reportShow')}
-      </Button>
-      <IconButton size="small" color="inherit" aria-label={t('sharedHide')} onClick={hide}>
-        <CloseIcon fontSize="small" />
-      </IconButton>
+      <span className={classes.message}>
+        <span className={classes.dot} />
+        <Typography variant="body2" className={classes.text}>
+          <strong>{formatAlarm(event.attributes.alarm, t)}</strong>
+          {` · ${devices[event.deviceId]?.name || ''} · ${formatTime(event.eventTime, 'seconds')}`}
+        </Typography>
+        {alarms.length > 1 && <span className={classes.more}>{`+${alarms.length - 1}`}</span>}
+      </span>
+      <span className={classes.actions}>
+        <Button
+          size="small"
+          variant="outlined"
+          className={classes.show}
+          onClick={() => dispatch(devicesActions.selectId(event.deviceId))}
+        >
+          {t('reportShow')}
+        </Button>
+        <Button size="small" className={classes.seen} onClick={() => markSeen([event])}>
+          {t('sharedAcknowledge')}
+        </Button>
+      </span>
     </Paper>
   );
 };

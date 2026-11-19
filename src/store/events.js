@@ -12,7 +12,9 @@ const { reducer, actions } = createSlice({
       const known = new Set(state.items.map((item) => item.id));
       state.items.push(...action.payload.filter((item) => !known.has(item.id)));
       state.items.sort((a, b) => new Date(b.eventTime) - new Date(a.eventTime));
-      state.items.splice(50);
+      // Alarms stay until marked as seen; only other notifications are capped (newest 50 kept)
+      let others = 0;
+      state.items = state.items.filter((item) => item.type === 'alarm' || (others += 1) <= 50);
     },
     delete(state, action) {
       state.items = state.items.filter((item) => item.id !== action.payload.id);
